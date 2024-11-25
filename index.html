@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dropdown and Submit Button</title>
+  <style>
+    form{
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        justify-content: center;
+        align-items: center;
+    }
+    select{
+        padding: 20px 10px;
+    }
+    button{
+        padding: 10px 20px;
+    }
+  </style>
+</head>
+<body>
+    <form>
+        <label for="options">Choose an option:</label>
+        <select id="options" name="selectedOption">
+          <option value="" disabled selected>Select an option</option>
+          <option value="option1">Peer Huddle 22 December 2024 (5 PM) ET</option>
+          <option value="option2">Peer Huddle 24 December 2024 (10 AM) ET</option>
+          <option value="option3">Peer Huddle 26 December 2024 (11:12 AM) ET</option>
+        </select>
+        <button type="button" id="generateICSButton">Generate ICS</button>
+      </form>
+
+      <p id="result"></p>
+      <script>
+        document.getElementById('generateICSButton').addEventListener('click', function() {
+            var selectedOption = document.getElementById('options').value;
+            
+            var eventDetails = {
+                'option1': {
+                    eventName: 'Peer Huddle 22 December 2024 (5 PM) ET',
+                    dateStart: '2024-12-22T17:00:00',
+                    duration: 60,  // Duration in minutes
+                    location: 'Online (Zoom)'
+                },
+                'option2': {
+                    eventName: 'Peer Huddle 24 December 2024 (10 AM) ET',
+                    dateStart: '2024-12-24T10:00:00',
+                    duration: 60,  // Duration in minutes
+                    location: 'Online (Teams)'
+                },
+                'option3': {
+                    eventName: 'Peer Huddle 26 December 2024 (11:12 AM) ET',
+                    dateStart: '2024-12-26T11:12:00',
+                    duration: 60, // Duration in minutes
+                    location: 'Conference Room A'
+                }
+            };
+
+            var eventData = eventDetails[selectedOption];
+
+            if (eventData) {
+                var now = new Date();
+
+                // Helper functions
+                function _isofix(d) {
+                    var offset = ("0" + ((new Date()).getTimezoneOffset() / 60)).slice(-2);
+                    if (typeof d === 'string') {
+                        return d.replace(/\-/g, '') + 'T' + offset + '0000Z';
+                    } else {
+                        return d.getFullYear() + _zp(d.getMonth() + 1) + _zp(d.getDate()) + 'T' + _zp(d.getHours()) + '0000Z';
+                    }
+                }
+
+                function _zp(s) { return ("0" + s).slice(-2); }
+
+                function _save(fileURL) {
+                    if (!window.ActiveXObject) {
+                        var save = document.createElement('a');
+                        save.href = fileURL;
+                        save.target = '_blank';
+                        save.download = eventData.eventName || 'unknown';
+
+                        var evt = new MouseEvent('click', {
+                            'view': window,
+                            'bubbles': true,
+                            'cancelable': false
+                        });
+                        save.dispatchEvent(evt);
+
+                        (window.URL || window.webkitURL).revokeObjectURL(save.href);
+                    } else if (!!window.ActiveXObject && document.execCommand) {
+                        var _window = window.open(fileURL, '_blank');
+                        _window.document.close();
+                        _window.document.execCommand('SaveAs', true, eventData.eventName || fileURL);
+                        _window.close();
+                    }
+                }
+
+                // Calculate the end time based on duration
+                var dateStart = new Date(eventData.dateStart);
+                var dateEnd = new Date(dateStart.getTime() + eventData.duration * 60000); // Adding duration in milliseconds
+
+                var ics_lines = [
+                    "BEGIN:VCALENDAR",
+                    "VERSION:2.0",
+                    "PRODID:-//Addroid Inc.//iCalAdUnit//EN",
+                    "METHOD:REQUEST",
+                    "BEGIN:VEVENT",
+                    "UID:event-" + now.getTime() + "@addroid.com",
+                    "DTSTAMP:" + _isofix(now),
+                    "DTSTART;TZID=America/New_York:" + _isofix(dateStart), // Adding timezone for start time
+                    "DTEND;TZID=America/New_York:" + _isofix(dateEnd), // Adding timezone for end time
+                    "DESCRIPTION:" + eventData.eventName,
+                    "SUMMARY:" + eventData.eventName,
+                    "LOCATION:" + eventData.location,  // Adding location
+                    "LAST-MODIFIED:" + _isofix(now),
+                    "SEQUENCE:0",
+                    "END:VEVENT",
+                    "END:VCALENDAR"
+                ];
+
+                var dlurl = 'data:text/calendar;base64,' + btoa(ics_lines.join('\r\n'));
+
+                try {
+                    _save(dlurl);
+                } catch (e) {
+                    console.log(e);
+                }
+            } else {
+                alert('Please select a valid event option.');
+            }
+        });
+      </script>
+</body>
+</html>
