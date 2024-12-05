@@ -1,137 +1,293 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dropdown and Submit Button</title>
-  <style>
-    form{
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        justify-content: center;
-        align-items: center;
+<section id="banner_event">
+<form id="ics_form">
+   <div class="form_heading">
+     <h3>
+       {{ module.form_top_heading }}
+      </h3>
+   </div>
+        <label>Email</label>
+        <input type="email" id="i_email" name="email" required>
+        <span id="emailError" style="color: red; font-size: 0.9em;"></span>
+        <label for="options">{{ module.event_heading }}</label>
+        <select id="options" name="selectedOption">
+          <option value="" disabled selected>Select huddle</option>
+          
+          {% for item in module.huddles %}
+          <option value="option{{loop.index}}">{{ item.huddle_title }}</option>
+{{ item.datetime_field }}
+          {% endfor %}
+         
+        </select>
+         <span id="optionError" style="color: red; font-size: 0.9em;"></span>
+        <button type="button" id="generateICSButton">Submit</button>
+      </form>
+</section>
+{% require_css %}
+<style>
+{% scope_css %}
+  form{
+    display: flex;
+    flex-direction: column;
+    gap: 10px!important;
+    justify-content: center;
+    align-items: flex-start;
+    max-width:500px;
+    width:100%;
+    background-color:#ffffff;
+    margin: auto;
+    padding: 30px 30px;
+    -webkit-box-shadow: 3px 6px 5px -1px rgba(0,0,0,0.75);
+-moz-box-shadow: 3px 6px 5px -1px rgba(0,0,0,0.75);
+box-shadow: 3px 6px 5px -1px rgba(0,0,0,0.75);
+
     }
+ form input[type=email], form select{
+   min-height: 2.75rem;
+   padding:0 10px;
+  }
+  button{
+    display: inline-block;
+    padding: 16px 24px;
+    border-radius: 8px;
+    background-color:#BCE500;
+    color:#1F0536;
+    border: none;
+  }
+  button:hover{
+    background-color: #DEC7F9;
+  }
+  .form_heading{
+    text-align: center;
+    margin: auto;
+  }
     select{
         padding: 20px 10px;
     }
     button{
         padding: 10px 20px;
     }
+
+{% end_scope_css %}
   </style>
-</head>
-<body>
-    <form>
-        <label for="options">Choose an option:</label>
-        <select id="options" name="selectedOption">
-          <option value="" disabled selected>Select an option</option>
-          <option value="option1">Peer Huddle 22 December 2024 (5 PM) ET</option>
-          <option value="option2">Peer Huddle 24 December 2024 (10 AM) ET</option>
-          <option value="option3">Peer Huddle 26 December 2024 (11:12 AM) ET</option>
-        </select>
-        <button type="button" id="generateICSButton">Generate ICS</button>
-      </form>
+{% end_require_css %}
 
-      <p id="result"></p>
-      <script>
-        document.getElementById('generateICSButton').addEventListener('click', function() {
-            var selectedOption = document.getElementById('options').value;
-            
-            var eventDetails = {
-                'option1': {
-                    eventName: 'Peer Huddle 22 December 2024 (5 PM) ET',
-                    dateStart: '2024-12-22T17:00:00',
-                    duration: 60,  // Duration in minutes
-                    location: 'Online (Zoom)'
-                },
-                'option2': {
-                    eventName: 'Peer Huddle 24 December 2024 (10 AM) ET',
-                    dateStart: '2024-12-24T10:00:00',
-                    duration: 60,  // Duration in minutes
-                    location: 'Online (Teams)'
-                },
-                'option3': {
-                    eventName: 'Peer Huddle 26 December 2024 (11:12 AM) ET',
-                    dateStart: '2024-12-26T11:12:00',
-                    duration: 60, // Duration in minutes
-                    location: 'Conference Room A'
-                }
-            };
+{% require_js %}
+<script>
+  
+   // Function to get query parameters
+  function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+  }
 
-            var eventData = eventDetails[selectedOption];
+  // Populate email input field
+  window.onload = function () {
+    const email = getQueryParam("email");
+    if (email) {
+      const emailInput = document.getElementById("i_email"); // Replace with your form's email field ID
+      if (emailInput) {
+        emailInput.value = decodeURIComponent(email);
+      }
+    }
+  };
+  
+document.getElementById('generateICSButton').addEventListener('click', function () {
+  const emailInput = document.getElementById('i_email');
+  const emailValue = emailInput.value;
+  const emailError = document.getElementById('emailError');
 
-            if (eventData) {
-                var now = new Date();
+  const selectedOption = document.getElementById('options').value;
+  const optionError = document.getElementById('optionError');
 
-                // Helper functions
-                function _isofix(d) {
-                    var offset = ("0" + ((new Date()).getTimezoneOffset() / 60)).slice(-2);
-                    if (typeof d === 'string') {
-                        return d.replace(/\-/g, '') + 'T' + offset + '0000Z';
-                    } else {
-                        return d.getFullYear() + _zp(d.getMonth() + 1) + _zp(d.getDate()) + 'T' + _zp(d.getHours()) + '0000Z';
-                    }
-                }
+  const hubspotFormUrl = 'https://api.hsforms.com/submissions/v3/integration/submit/24220313/f88eb2cb-e462-4669-ab47-788c868b7da4';
 
-                function _zp(s) { return ("0" + s).slice(-2); }
+  // Event details
+  const eventDetails = {
+     {% for item in module.huddles %}
+    option{{ loop.index }}: {
+      eventName: '{{ item.huddle_title }}',
+      dateStart: '{{ item.datetime_field }}',
+      duration: 60, // Duration in minutes
+      location: '{{ item.location }}',
+      description: '{{ item.description }}',
+    }{% if not loop.last %},{% endif %}
+             {% endfor %}
+  };
+  
 
-                function _save(fileURL) {
-                    if (!window.ActiveXObject) {
-                        var save = document.createElement('a');
-                        save.href = fileURL;
-                        save.target = '_blank';
-                        save.download = eventData.eventName || 'unknown';
+  const eventData = eventDetails[selectedOption];
+console.log(eventData);
+ 
+//   formatting date for emails token value
+// const date_string= eventData.dateStart;
+//   console.log(date_string);
+// //   convert string to a date object
+// const date_obj= new Date(date_string);
+//  console.log(date_obj);
 
-                        var evt = new MouseEvent('click', {
-                            'view': window,
-                            'bubbles': true,
-                            'cancelable': false
-                        });
-                        save.dispatchEvent(evt);
+// const options = { weekday:'long', year: 'numeric', month: 'long', day: 'numeric' };
+// const formattedDate = date_obj.toLocaleDateString('en-US', options);
+// console.log(formattedDate);
+  // Clear previous error messages
+  emailError.textContent = '';
+  optionError.textContent = '';
 
-                        (window.URL || window.webkitURL).revokeObjectURL(save.href);
-                    } else if (!!window.ActiveXObject && document.execCommand) {
-                        var _window = window.open(fileURL, '_blank');
-                        _window.document.close();
-                        _window.document.execCommand('SaveAs', true, eventData.eventName || fileURL);
-                        _window.close();
-                    }
-                }
+  // Email validation function
+  function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Regex for email validation
+    return emailRegex.test(email);
+  }
 
-                // Calculate the end time based on duration
-                var dateStart = new Date(eventData.dateStart);
-                var dateEnd = new Date(dateStart.getTime() + eventData.duration * 60000); // Adding duration in milliseconds
+  let isValid = true;
 
-                var ics_lines = [
-                    "BEGIN:VCALENDAR",
-                    "VERSION:2.0",
-                    "PRODID:-//Addroid Inc.//iCalAdUnit//EN",
-                    "METHOD:REQUEST",
-                    "BEGIN:VEVENT",
-                    "UID:event-" + now.getTime() + "@addroid.com",
-                    "DTSTAMP:" + _isofix(now),
-                    "DTSTART;TZID=America/New_York:" + _isofix(dateStart), // Adding timezone for start time
-                    "DTEND;TZID=America/New_York:" + _isofix(dateEnd), // Adding timezone for end time
-                    "DESCRIPTION:" + eventData.eventName,
-                    "SUMMARY:" + eventData.eventName,
-                    "LOCATION:" + eventData.location,  // Adding location
-                    "LAST-MODIFIED:" + _isofix(now),
-                    "SEQUENCE:0",
-                    "END:VEVENT",
-                    "END:VCALENDAR"
-                ];
+  // Validate email
+  if (!emailValue || !isValidEmail(emailValue)) {
+    emailError.textContent = 'Please enter a valid email address.';
+    emailInput.focus();
+    isValid = false;
+  }
 
-                var dlurl = 'data:text/calendar;base64,' + btoa(ics_lines.join('\r\n'));
+  // Validate selected option
+  if (!selectedOption || !eventData) {
+    optionError.textContent = 'Please select a valid event option.';
+    isValid = false;
+  }
 
-                try {
-                    _save(dlurl);
-                } catch (e) {
-                    console.log(e);
-                }
-            } else {
-                alert('Please select a valid event option.');
-            }
-        });
-      </script>
-</body>
-</html>
+  if (!isValid) {
+    return;
+  }
+
+  // Proceed with the form submission and ICS generation logic
+  const now = new Date();
+
+  // Function to format dates
+  function _isofix(d) {
+    const offset = ('0' + (new Date().getTimezoneOffset() / 60)).slice(-2);
+    if (typeof d === 'string') {
+      return d.replace(/-/g, '') + 'T' + offset + '0000Z';
+    } else {
+      return (
+        d.getFullYear() +
+        ('0' + (d.getMonth() + 1)).slice(-2) +
+        ('0' + d.getDate()).slice(-2) +
+        'T' +
+        ('0' + d.getHours()).slice(-2) +
+        '0000Z'
+      );
+    }
+  }
+
+  const dateStart = new Date(new Date(eventData.dateStart).valueOf() + 21600000);
+  const dateEnd = new Date(dateStart.getTime() + eventData.duration * 60000);
+
+//   const ics_lines = [
+//     'BEGIN:VCALENDAR',
+//     'VERSION:2.0',
+//     'PRODID:-//Addroid Inc.//iCalAdUnit//EN',
+//     'METHOD:REQUEST',
+//     'BEGIN:VEVENT',
+//     'UID:event-' + now.getTime() + '@addroid.com',
+//     'DTSTAMP:' + _isofix(now),
+//     'DTSTART;TZID=America/New_York:' + _isofix(dateStart),
+//     'DTEND;TZID=America/New_York:' + _isofix(dateEnd),
+//     'DESCRIPTION:' + eventData.eventName,
+//     'SUMMARY:' + eventData.eventName,
+//     'LOCATION:' + eventData.location,
+//     'LAST-MODIFIED:' + _isofix(now),
+//     'SEQUENCE:0',
+//     'END:VEVENT',
+//     'END:VCALENDAR',
+//   ];
+  const event = {data:{
+  start: [dateStart.getFullYear(), dateStart.getMonth() + 1, dateStart.getDate(), dateStart.getHours(), dateStart.getMinutes()],
+  duration: { hours: 0, minutes: eventData.duration },
+  title: eventData.eventName,
+  description: eventData.description,
+  location: eventData.location
+},
+email:emailValue,
+                 dateStart:eventData.dateStart
+}
+
+  //const dlurl = 'data:text/calendar;base64,' + btoa(ics_lines.join('\r\n'));
+  
+  // Save ICS file
+//   function _save(fileURL) {
+//     const save = document.createElement('a');
+//     save.href = fileURL;
+//     save.target = '_blank';
+//     save.download = eventData.eventName || 'unknown';
+//     save.dispatchEvent(new MouseEvent('click', { view: window, bubbles: true, cancelable: false }));
+//     (window.URL || window.webkitURL).revokeObjectURL(save.href);
+//   }
+  function _save(event) {
+     const myHeaders = new Headers();
+     myHeaders.append("Content-Type", "application/json");
+     fetch('https://mats.demandtech.org/saveICS',{
+			  method: "POST",
+			  headers: myHeaders,
+			  redirect: "follow",
+			  body:JSON.stringify(event)
+	 })
+	 .then((response)=>{
+	     response.text();
+	 })
+	 .then((result)=>{
+	   console.log(result);
+	 })
+	 .catch((error)=>{
+	    console.log(error);
+	 })
+  }
+
+  try {
+    _save(event);
+  } catch (e) {
+    console.log(e);
+  }
+
+  // Prepare HubSpot form data
+  const formData = {
+    fields: [
+      {
+        name: 'email',
+        value: emailValue,
+      },
+    ],
+    context: {
+      pageUri: window.location.href,
+      pageName: document.title,
+    },
+  };
+
+  // Submit data to HubSpot form
+  fetch(hubspotFormUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(formData),
+  })
+    .then((response) => {
+      if (response.ok) {
+        return response.json();
+      } else {
+        throw new Error('Form submission failed');
+      }
+    })
+    .then((data) => {
+      console.log('Form submission successful:', data);
+    window.open("https://pages.cmohuddles.com/thank-you", "_self");
+    })
+    .catch((error) => {
+      console.error('Error submitting form:', error);
+      alert('There was an error submitting the form. Please try again.');
+    });
+  document.getElementById('i_email').value='';
+  document.getElementById('options').value='';
+  
+});
+  
+</script>
+{% end_require_js %}
+
